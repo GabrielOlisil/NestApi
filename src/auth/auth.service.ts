@@ -4,19 +4,36 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { User } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { CreateUserDTO } from 'src/users/dto/create.users.dto';
+import { UserService } from 'src/users/user.service';
 import { AuthLoginDTO } from './dto/auth.login.dto';
+import { AuthRegisterDTO } from './dto/auth.register.dto';
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly Jwtservice: JwtService,
     private readonly prisma: PrismaService,
+    private readonly UserService: UserService,
   ) {}
 
-  async createToken() {
-    //return this.Jwtservice.sign();
+  async createToken(user: User) {
+    return {
+      accessToken: this.Jwtservice.sign(
+        {
+          id: user.id_usr,
+          name: user.name_usr,
+          email: user.email_usr,
+        },
+        {
+          expiresIn: '2 days',
+          subject: user.id_usr.toString(),
+          issuer: 'login',
+          audience: 'users',
+        },
+      ),
+    };
   }
 
   async verifyToken() {
@@ -35,7 +52,7 @@ export class AuthService {
       throw new UnauthorizedException('Informações incorretas');
     }
 
-    return user;
+    return this.createToken(user);
   }
   async forget(email: string) {
     const user = await this.prisma.user.findFirst({
@@ -52,7 +69,7 @@ export class AuthService {
   }
   async reset(newPassword: string, token: string) {
     const id = 1;
-    await this.prisma.user.update({
+    const user = await this.prisma.user.update({
       where: {
         id_usr: id,
       },
@@ -60,5 +77,13 @@ export class AuthService {
         password_usr: newPassword,
       },
     });
+
+    return this.createToken(user);
+  }
+
+  async register(data: AuthRegisterDTO) {
+    const user = await this.UserService.create(data);
+
+    return this.createToken(user);
   }
 }

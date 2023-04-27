@@ -15,10 +15,6 @@ export class UserService {
         name_usr: name,
         password_usr: password,
       },
-      select: {
-        id_usr: true,
-        createdAt: true,
-      },
     });
   }
 
