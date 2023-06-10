@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Injectable,
   NotFoundException,
   UnauthorizedException,
@@ -18,7 +19,7 @@ export class AuthService {
     private readonly UserService: UserService,
   ) {}
 
-  async createToken(user: User) {
+  createToken(user: User) {
     return {
       accessToken: this.Jwtservice.sign(
         {
@@ -27,7 +28,7 @@ export class AuthService {
           email: user.email_usr,
         },
         {
-          expiresIn: '2 days',
+          expiresIn: '10 hours',
           subject: user.id_usr.toString(),
           issuer: 'login',
           audience: 'users',
@@ -36,8 +37,16 @@ export class AuthService {
     };
   }
 
-  async verifyToken() {
-    //return this.Jwtservice.verify();
+  verifyToken(token: string) {
+    try {
+      const data = this.Jwtservice.verify(token, {
+        audience: 'users',
+        issuer: 'login',
+      });
+      return data;
+    } catch (e) {
+      throw new BadRequestException(e);
+    }
   }
 
   async login(body: AuthLoginDTO) {
@@ -54,6 +63,7 @@ export class AuthService {
 
     return this.createToken(user);
   }
+
   async forget(email: string) {
     const user = await this.prisma.user.findFirst({
       where: {
